@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RFID Dashboard - Team07</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+            padding: 40px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>RFID Card Top-Up System</h1>
+
+<div class="card">
+    <h3>Card Status</h3>
+    <p><strong>UID:</strong> <span id="uid">Waiting...</span></p>
+    <p><strong>Balance:</strong> <span id="balance">0</span></p>
+</div>
+
+<div class="card">
+    <h3>Top-Up</h3>
+    <input type="text" id="topupUid" placeholder="Card UID">
+    <br>
+    <input type="number" id="amount" placeholder="Amount">
+    <br>
+    <button onclick="sendTopup()">Send Top-Up</button>
+</div>
+
+<script>
+    const ws = new WebSocket("ws://localhost:3000");
+
+    ws.onmessage = function(event) {
+        const message = JSON.parse(event.data);
+        const topic = message.topic;
+        const data = message.data;
+
+        if (topic.includes("status")) {
+            document.getElementById("uid").innerText = data.uid;
+            document.getElementById("balance").innerText = data.balance;
+        }
+
+        if (topic.includes("balance")) {
+            document.getElementById("balance").innerText = data.new_balance;
+        }
+    };
+
+    function sendTopup() {
+        const uid = document.getElementById("topupUid").value;
+        const amount = document.getElementById("amount").value;
+
+        fetch("http://localhost:3000/topup", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ uid, amount })
+        })
+        .then(res => res.json())
+        .then(data => alert(data.message))
+        .catch(err => console.error(err));
+    }
+</script>
+
+</body>
+</html>
