@@ -16,7 +16,7 @@ const wss = new WebSocket.Server({ server });
 // =============================
 // CONFIG
 // =============================
-const TEAM_ID = "Krii_pa"; // Must match Arduino team_id
+const TEAM_ID = "Krii_pa"; 
 const MQTT_BROKER = "mqtt://broker.benax.rw:1883"; 
 
 const TOPIC_STATUS  = `rfid/${TEAM_ID}/card/status`;
