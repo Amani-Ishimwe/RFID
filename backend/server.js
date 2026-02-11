@@ -16,7 +16,7 @@ const wss = new WebSocket.Server({ server });
 // CONFIG
 // =============================
 const TEAM_ID = "team07";
-const MQTT_BROKER = "mqtt://broker.benax.rw:1883"; // local mosquitto
+const MQTT_BROKER = "mqtt://broker.benax.rw:1883"; 
 
 const TOPIC_STATUS = `rfid/${TEAM_ID}/card/status`;
 const TOPIC_TOPUP = `rfid/${TEAM_ID}/card/topup`;
