@@ -51,7 +51,7 @@
 </div>
 
 <script>
-    const ws = new WebSocket("ws://localhost:3000");
+    const ws = new WebSocket(`ws://${location.host}`);
 
     ws.onmessage = function(event) {
         const message = JSON.parse(event.data);
@@ -72,16 +72,16 @@
         const uid = document.getElementById("topupUid").value;
         const amount = document.getElementById("amount").value;
 
-        fetch("http://localhost:3000/topup", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ uid, amount })
-        })
-        .then(res => res.json())
-        .then(data => alert(data.message))
-        .catch(err => console.error(err));
+        fetch("/topup", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ uid, amount })
+})
+.then(res => res.json())
+.then(data => alert(data.message))
+.catch(err => console.error(err));
     }
 </script>
 
