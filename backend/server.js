@@ -1,62 +1,80 @@
 const express = require("express");
-const http = require("http");
-const WebSocket = require("ws");
 const mqtt = require("mqtt");
+const WebSocket = require("ws");
+const http = require("http");
 const cors = require("cors");
+const path = require("path"); // <-- add path
 
 const app = express();
+app.use(express.json());
+app.use(cors());
+app.use(express.static(path.join(__dirname, "public"))); // safer
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-app.use(cors());
-app.use(express.json());
 
-const PORT = 9234;
+// =============================
+// CONFIG
+// =============================
+const TEAM_ID = "team07";
+const MQTT_BROKER = "mqtt://broker.benax.rw:1883"; 
 
-// Store balances per card UID
-const cardBalances = {};
+const TOPIC_STATUS = `rfid/${TEAM_ID}/card/status`;
+const TOPIC_TOPUP = `rfid/${TEAM_ID}/card/topup`;
+const TOPIC_BALANCE = `rfid/${TEAM_ID}/card/balance`;
 
-// MQTT setup
-const mqttClient = mqtt.connect("mqtt://broker.benax.rw");
+// =============================
+// MQTT
+// =============================
+const mqttClient = mqtt.connect(MQTT_BROKER);
 
 mqttClient.on("connect", () => {
-  console.log("Connected to MQTT broker");
-  mqttClient.subscribe("rfid/team_07/card/status");
+    console.log("✅ Connected to MQTT");
+    mqttClient.subscribe(TOPIC_STATUS);
+    mqttClient.subscribe(TOPIC_BALANCE);
 });
 
 mqttClient.on("message", (topic, message) => {
-  const data = JSON.parse(message.toString());
-  const { uid, balance } = data;
+    const data = JSON.parse(message.toString());
+    console.log("MQTT Message:", topic, data);
 
-  // Update backend balance storage
-  if (!(uid in cardBalances)) cardBalances[uid] = balance;
-
-  // Send update to all connected WebSocket clients
-  const payload = JSON.stringify({ uid, balance: cardBalances[uid] });
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) client.send(payload);
-  });
+    // Broadcast to all connected browsers
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+                topic,
+                data
+            }));
+        }
+    });
 });
 
-wss.on("connection", ws => {
-  console.log("WebSocket client connected");
-});
-
-// Top-up endpoint
+// =============================
+// HTTP ROUTES
+// =============================
 app.post("/topup", (req, res) => {
-  const { uid, amount } = req.body;
-  if (!uid || !amount) return res.status(400).send("UID and amount required");
+    const { uid, amount } = req.body;
 
-  cardBalances[uid] = (cardBalances[uid] || 0) + parseFloat(amount);
+    if (!uid || !amount) {
+        return res.status(400).json({ error: "Missing uid or amount" });
+    }
 
-  // Notify all WebSocket clients of updated balance
-  const payload = JSON.stringify({ uid, balance: cardBalances[uid] });
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) client.send(payload);
-  });
+    const payload = {
+        uid,
+        amount: parseInt(amount)
+    };
 
-  res.send({ uid, balance: cardBalances[uid] });
+    mqttClient.publish(TOPIC_TOPUP, JSON.stringify(payload));
+
+    res.json({ success: true, message: "Top-up command sent" });
 });
 
-server.listen(PORT, () => {
-  console.log(`HTTP & WebSocket server running on port ${PORT}`);
+// optional: explicitly serve index.html
+app.get("/index.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// =============================
+server.listen(9234, () => {
+    console.log("🚀 Server running at 9234");
 });
