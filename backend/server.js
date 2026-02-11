@@ -3,11 +3,12 @@ const mqtt = require("mqtt");
 const WebSocket = require("ws");
 const http = require("http");
 const cors = require("cors");
+const path = require("path"); // <-- add path
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public"))); // safer
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -49,7 +50,7 @@ mqttClient.on("message", (topic, message) => {
 });
 
 // =============================
-// HTTP ROUTE
+// HTTP ROUTES
 // =============================
 app.post("/topup", (req, res) => {
     const { uid, amount } = req.body;
@@ -66,6 +67,11 @@ app.post("/topup", (req, res) => {
     mqttClient.publish(TOPIC_TOPUP, JSON.stringify(payload));
 
     res.json({ success: true, message: "Top-up command sent" });
+});
+
+// optional: explicitly serve index.html
+app.get("/index.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // =============================
